@@ -1,5 +1,6 @@
 package re.neotamia.jei2cc;
 
+import com.simibubi.create.AllBlocks;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.gui.buttons.IButtonState;
@@ -8,8 +9,11 @@ import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.inputs.IJeiUserInput;
 import mezz.jei.api.helpers.IJeiHelpers;
 import mezz.jei.api.recipe.category.IRecipeCategory;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 
 public class Jei2CCButtonController<T> implements IIconButtonController {
     private final IJeiHelpers jeiHelpers;
@@ -35,6 +39,13 @@ public class Jei2CCButtonController<T> implements IIconButtonController {
         if (input.isSimulate()) {
             return true;
         }
+
+        final Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return false;
+
+        final ItemStack itemStack = mc.player.getItemInHand(InteractionHand.MAIN_HAND);
+        if (itemStack.isEmpty()) return false;
+        if (!itemStack.is(AllBlocks.CLIPBOARD.asItem())) return false;
 
         final IRecipeCategory<T> category = this.recipeLayoutDrawable.getRecipeCategory();
         final T recipe = this.recipeLayoutDrawable.getRecipe();
