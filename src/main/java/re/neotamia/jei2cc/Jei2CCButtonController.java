@@ -1,3 +1,4 @@
+
 package re.neotamia.jei2cc;
 
 import com.simibubi.create.AllBlocks;
@@ -14,10 +15,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
 import java.util.List;
+import java.util.Map;
 
 public class Jei2CCButtonController<T> implements IIconButtonController {
     private final IJeiHelpers jeiHelpers;
@@ -39,14 +42,26 @@ public class Jei2CCButtonController<T> implements IIconButtonController {
         state.setIcon(icon);
     }
 
+    private boolean hasClipboardInHand(ItemStack itemStack) {
+        return !itemStack.isEmpty() && itemStack.is(AllBlocks.CLIPBOARD.asItem());
+    }
+
+    private ItemStack getClipboardInHand() {
+        if (this.mc.player == null) return ItemStack.EMPTY;
+        ItemStack itemStack = mc.player.getItemInHand(InteractionHand.MAIN_HAND);
+        if (!this.hasClipboardInHand(itemStack)) {
+            itemStack = mc.player.getItemInHand(InteractionHand.OFF_HAND);
+        }
+        if (!this.hasClipboardInHand(itemStack)) return ItemStack.EMPTY;
+        return itemStack;
+    }
+
     @Override
     public boolean onPress(IJeiUserInput input) {
         if (input.isSimulate()) return true;
-        if (this.mc.player == null) return false;
 
-        final ItemStack itemStack = mc.player.getItemInHand(InteractionHand.MAIN_HAND);
+        final ItemStack itemStack = this.getClipboardInHand();
         if (itemStack.isEmpty()) return false;
-        if (!itemStack.is(AllBlocks.CLIPBOARD.asItem())) return false;
 
         final T recipe = this.recipeLayoutDrawable.getRecipe();
         System.out.println("Recipe: " + recipe.getClass());
@@ -77,9 +92,8 @@ public class Jei2CCButtonController<T> implements IIconButtonController {
 
     @Override
     public void updateState(IButtonState state) {
-        if (this.mc.player == null) return;
-        final ItemStack itemStack = mc.player.getItemInHand(InteractionHand.MAIN_HAND);
+        final ItemStack itemStack = this.getClipboardInHand();
         if (itemStack.isEmpty()) return;
-        state.setVisible(itemStack.is(AllBlocks.CLIPBOARD.asItem()));
+        state.setVisible(this.hasClipboardInHand(itemStack));
     }
 }
