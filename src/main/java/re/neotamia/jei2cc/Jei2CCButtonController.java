@@ -1,24 +1,28 @@
 package re.neotamia.jei2cc;
 
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllItems;
-import com.simibubi.create.content.equipment.clipboard.ClipboardBlock;
-import com.simibubi.create.content.equipment.clipboard.ClipboardBlockItem;
+import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.gui.buttons.IButtonState;
 import mezz.jei.api.gui.buttons.IIconButtonController;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.inputs.IJeiUserInput;
 import mezz.jei.api.helpers.IJeiHelpers;
+import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.resources.ResourceLocation;
 
-public class Jei2CCButtonController implements IIconButtonController {
+public class Jei2CCButtonController<T> implements IIconButtonController {
+    private final IJeiHelpers jeiHelpers;
     private final IDrawable icon;
+    private final IRecipeLayoutDrawable<T> recipeLayoutDrawable;
 
-    public Jei2CCButtonController(IJeiHelpers jeiHelpers) {
-        this.icon = jeiHelpers.getGuiHelper().createDrawableItemStack(new ItemStack(AllBlocks.CLIPBOARD));
+    public Jei2CCButtonController(IJeiHelpers jeiHelpers, IRecipeLayoutDrawable<T> recipeLayoutDrawable) {
+        this.jeiHelpers = jeiHelpers;
+        this.recipeLayoutDrawable = recipeLayoutDrawable;
+        this.icon = jeiHelpers.getGuiHelper()
+                .drawableBuilder(ResourceLocation.fromNamespaceAndPath("create", "textures/item/clipboard.png"), 0, 0, 10,10)
+                .setTextureSize(10, 10)
+                .build();
     }
 
     @Override
@@ -28,7 +32,19 @@ public class Jei2CCButtonController implements IIconButtonController {
 
     @Override
     public boolean onPress(IJeiUserInput input) {
-        return false;
+        if (input.isSimulate()) {
+            return true;
+        }
+
+        final IRecipeCategory<T> category = this.recipeLayoutDrawable.getRecipeCategory();
+        final T recipe = this.recipeLayoutDrawable.getRecipe();
+        final ResourceLocation recipeTypeUid = category.getRecipeType().getUid();
+
+        System.out.println("Recipe Type UID: " + recipeTypeUid);
+        System.out.println("Recipe: " + recipe);
+        System.out.println("Category: " + category);
+
+        return true;
     }
 
     @Override

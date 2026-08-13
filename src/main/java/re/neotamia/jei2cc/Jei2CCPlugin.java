@@ -22,7 +22,7 @@ public class Jei2CCPlugin implements IModPlugin {
         IRecipeButtonControllerFactory factory = new IRecipeButtonControllerFactory() {
             @Override
             public <T> @NotNull IIconButtonController createButtonController(IRecipeLayoutDrawable<T> recipeLayoutDrawable) {
-                return new Jei2CCButtonController(registration.getJeiHelpers());
+                return new Jei2CCButtonController(registration.getJeiHelpers(), recipeLayoutDrawable);
             }
         };
         registration.addRecipeButtonFactory(factory);
