@@ -1,8 +1,8 @@
-
 package re.neotamia.jei2cc;
 
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.schematics.cannon.MaterialChecklist;
+import com.simibubi.create.content.schematics.requirement.ItemRequirement;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.gui.buttons.IButtonState;
@@ -15,21 +15,18 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Jei2CCButtonController<T> implements IIconButtonController {
-    private final IJeiHelpers jeiHelpers;
     private final IDrawable icon;
     private final IRecipeLayoutDrawable<T> recipeLayoutDrawable;
     private final Minecraft mc = Minecraft.getInstance();
 
     public Jei2CCButtonController(IJeiHelpers jeiHelpers, IRecipeLayoutDrawable<T> recipeLayoutDrawable) {
-        this.jeiHelpers = jeiHelpers;
         this.recipeLayoutDrawable = recipeLayoutDrawable;
         this.icon = jeiHelpers.getGuiHelper()
                 .drawableBuilder(ResourceLocation.fromNamespaceAndPath("create", "textures/item/clipboard.png"), 0, 0, 10, 10)
@@ -60,8 +57,8 @@ public class Jei2CCButtonController<T> implements IIconButtonController {
     public boolean onPress(IJeiUserInput input) {
         if (input.isSimulate()) return true;
 
-        final ItemStack itemStack = this.getClipboardInHand();
-        if (itemStack.isEmpty()) return false;
+        final ItemStack clipboard = this.getClipboardInHand();
+        if (clipboard.isEmpty()) return false;
 
         final T recipe = this.recipeLayoutDrawable.getRecipe();
         System.out.println("Recipe: " + recipe.getClass());
@@ -75,8 +72,17 @@ public class Jei2CCButtonController<T> implements IIconButtonController {
                 .skip(1)
                 .filter(slotView -> slotView.getDisplayedItemStack().isPresent())
                 .map(slotView -> slotView.getDisplayedItemStack().get())
+                .collect(Collectors.toMap(ItemStack::getItem, ItemStack::getCount, Integer::sum))
+                .entrySet()
+                .stream()
+                .map(entry -> entry.getKey().getDefaultInstance().copyWithCount(entry.getValue()))
                 .toList();
         System.out.println(ingredients);
+
+        checklist.require(new ItemRequirement(ItemRequirement.ItemUseType.CONSUME, ingredients));
+        final var newClipboard = checklist.createWrittenClipboard();
+
+        mc.player.getInventory().setItem(mc.player.getInventory().selected, newClipboard);
 
         System.out.println("Recipe Type UID: " + recipeTypeUid);
         System.out.println("Recipe: " + holder);
