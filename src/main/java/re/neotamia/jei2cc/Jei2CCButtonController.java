@@ -8,17 +8,19 @@ import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.gui.buttons.IButtonState;
 import mezz.jei.api.gui.buttons.IIconButtonController;
 import mezz.jei.api.gui.drawable.IDrawable;
+import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.gui.inputs.IJeiUserInput;
 import mezz.jei.api.helpers.IJeiHelpers;
-import mezz.jei.api.recipe.category.IRecipeCategory;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.RecipeHolder;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class Jei2CCButtonController<T> implements IIconButtonController {
@@ -39,20 +41,6 @@ public class Jei2CCButtonController<T> implements IIconButtonController {
         state.setIcon(icon);
     }
 
-    private boolean hasClipboardInHand(ItemStack itemStack) {
-        return !itemStack.isEmpty() && itemStack.is(AllBlocks.CLIPBOARD.asItem());
-    }
-
-    private ItemStack getClipboardInHand() {
-        if (this.mc.player == null) return ItemStack.EMPTY;
-        ItemStack itemStack = mc.player.getItemInHand(InteractionHand.MAIN_HAND);
-        if (!this.hasClipboardInHand(itemStack)) {
-            itemStack = mc.player.getItemInHand(InteractionHand.OFF_HAND);
-        }
-        if (!this.hasClipboardInHand(itemStack)) return ItemStack.EMPTY;
-        return itemStack;
-    }
-
     @Override
     public boolean onPress(IJeiUserInput input) {
         if (input.isSimulate()) return true;
@@ -60,33 +48,26 @@ public class Jei2CCButtonController<T> implements IIconButtonController {
         final ItemStack clipboard = this.getClipboardInHand();
         if (clipboard.isEmpty()) return false;
 
-        final T recipe = this.recipeLayoutDrawable.getRecipe();
-        System.out.println("Recipe: " + recipe.getClass());
-        if (!(recipe instanceof RecipeHolder<?> holder)) return false;
-
-        final IRecipeCategory<T> category = this.recipeLayoutDrawable.getRecipeCategory();
-        final ResourceLocation recipeTypeUid = category.getRecipeType().getUid();
         final MaterialChecklist checklist = new MaterialChecklist();
-
         final List<ItemStack> ingredients = this.recipeLayoutDrawable.getRecipeSlotsView().getSlotViews().stream()
                 .skip(1)
                 .filter(slotView -> slotView.getDisplayedItemStack().isPresent())
-                .map(slotView -> slotView.getDisplayedItemStack().get())
+
+                .flatMap(IRecipeSlotView::getAllIngredients)
+                .map(iTypedIngredient -> iTypedIngredient.castToItemStackType().getItemStack())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+
                 .collect(Collectors.toMap(ItemStack::getItem, ItemStack::getCount, Integer::sum))
                 .entrySet()
                 .stream()
                 .map(entry -> entry.getKey().getDefaultInstance().copyWithCount(entry.getValue()))
                 .toList();
-        System.out.println(ingredients);
 
         checklist.require(new ItemRequirement(ItemRequirement.ItemUseType.CONSUME, ingredients));
         final var newClipboard = checklist.createWrittenClipboard();
 
         mc.player.getInventory().setItem(mc.player.getInventory().selected, newClipboard);
-
-        System.out.println("Recipe Type UID: " + recipeTypeUid);
-        System.out.println("Recipe: " + holder);
-        System.out.println("Category: " + category);
 
         return true;
     }
@@ -99,7 +80,20 @@ public class Jei2CCButtonController<T> implements IIconButtonController {
     @Override
     public void updateState(IButtonState state) {
         final ItemStack itemStack = this.getClipboardInHand();
-        if (itemStack.isEmpty()) return;
         state.setVisible(this.hasClipboardInHand(itemStack));
+    }
+
+
+    private boolean hasClipboardInHand(ItemStack itemStack) {
+        return !itemStack.isEmpty() && itemStack.is(AllBlocks.CLIPBOARD.asItem());
+    }
+
+    private ItemStack getClipboardInHand() {
+        if (this.mc.player == null) return ItemStack.EMPTY;
+        ItemStack itemStack = mc.player.getItemInHand(InteractionHand.MAIN_HAND);
+        if (!this.hasClipboardInHand(itemStack))
+            itemStack = mc.player.getItemInHand(InteractionHand.OFF_HAND);
+        if (!this.hasClipboardInHand(itemStack)) return ItemStack.EMPTY;
+        return itemStack;
     }
 }
