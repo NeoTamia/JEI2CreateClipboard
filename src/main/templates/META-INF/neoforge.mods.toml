@@ -82,7 +82,7 @@ side = "BOTH"
 [[dependencies."${mod_id}"]]
 modId="jei"
 type="required"
-versionRange="[19.43.0.0,19.44,)"
+versionRange="[19.43.0.0,)"
 ordering="NONE"
 side="BOTH"
 
